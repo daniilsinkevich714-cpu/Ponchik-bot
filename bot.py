@@ -194,10 +194,18 @@ async def on_ready():
     except Exception as e:
         print("❌ Setup error:", e)
 
-    try:
-        await tree.sync(guild=guild)
-    except Exception as e:
-        print("❌ Sync error:", e)
+ try:
+    print("🔁 Syncing commands...")
+
+    synced = await tree.sync(guild=guild)
+    print(f"🔁 Guild synced: {len(synced)} commands")
+
+    # 🔥 forces full refresh (fixes missing vouch commands)
+    synced_global = await tree.sync()
+    print(f"🌍 Global synced: {len(synced_global)} commands")
+
+except Exception as e:
+    print("❌ Sync error:", e)
 
     if not rotate.is_running():
         rotate.start()

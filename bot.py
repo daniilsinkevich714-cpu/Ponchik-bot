@@ -238,11 +238,9 @@ async def on_ready():
     guild = discord.Object(id=GUILD_ID)
 
     Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
-Bugreport.setup(tree, GUILD_ID)
+    Bugreport.setup(tree, GUILD_ID)
 
     await tree.sync(guild=guild)
 
     rotate.start()
     print("Bot fully loaded")
-
-client.run(TOKEN)

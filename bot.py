@@ -170,8 +170,7 @@ class VouchView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.build(), view=self)
 
-# ================= READY =================
-@client.event
+# ================= READY =================@client.event
 async def on_ready():
     print(f"Bot running as {client.user}")
 
@@ -180,7 +179,6 @@ async def on_ready():
     try:
         Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
 
-        # 🔧 FIX: prevent crash if setup missing
         if hasattr(Bugreport, "setup"):
             Bugreport.setup(tree, GUILD_ID)
         else:
@@ -194,23 +192,22 @@ async def on_ready():
     except Exception as e:
         print("❌ Setup error:", e)
 
- try:
-    print("🔁 Syncing commands...")
+    # 🔁 SYNC BLOCK (FIXED INDENTATION)
+    try:
+        print("🔁 Syncing commands...")
 
-    synced = await tree.sync(guild=guild)
-    print(f"🔁 Guild synced: {len(synced)} commands")
+        synced = await tree.sync(guild=guild)
+        print(f"🔁 Guild synced: {len(synced)} commands")
 
-    # 🔥 forces full refresh (fixes missing vouch commands)
-    synced_global = await tree.sync()
-    print(f"🌍 Global synced: {len(synced_global)} commands")
+        synced_global = await tree.sync()
+        print(f"🌍 Global synced: {len(synced_global)} commands")
 
-except Exception as e:
-    print("❌ Sync error:", e)
+    except Exception as e:
+        print("❌ Sync error:", e)
 
     if not rotate.is_running():
         rotate.start()
 
     print("Bot fully loaded 🚀")
-
 # ================= RUN =================
 client.run(TOKEN)

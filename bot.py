@@ -47,7 +47,7 @@ intents.members = True
 intents.message_content = True
 
 client = discord.Client(intents=intents)
-tree = client.tree
+tree = app_commands.CommandTree(client)
 
 # ================= STATE =================
 def generate_token():

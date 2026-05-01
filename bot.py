@@ -222,6 +222,7 @@ async def on_ready():
 
     try:
         Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
+        Ping.setup(tree, GUILD_ID)
         Bugreport.setup(tree, GUILD_ID)
     except Exception as e:
         print("❌ Setup error:", e)

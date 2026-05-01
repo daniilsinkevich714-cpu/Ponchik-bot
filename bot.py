@@ -36,13 +36,9 @@ tree = app_commands.CommandTree(client)
 async def on_ready():
     print(f"Bot running as {client.user}")
 
-    guild = discord.Object(id=GUILD_ID)
-
     Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
     ping.setup(tree, GUILD_ID)
 
-    await tree.sync(guild=guild)
+    await tree.sync()  # ← FIXED
 
     print("Bot fully loaded 🚀")
-
-client.run(TOKEN)

@@ -1,35 +1,37 @@
 import discord
-from discord.ext import commands
+from discord import app_commands
 
-@commands.command()
-async def bugreport(ctx, *, info: str = None):
-    if info is None:
-        await ctx.send("❌ Please write your bug report. Example: `!bugreport vouch command not working`")
-        return
+def setup(tree: app_commands.CommandTree, guild_id: int):
 
-    # 👇 CHANGE THIS to your bug report channel ID
-    BUG_CHANNEL_ID = 1499576814643707994
-
-    channel = ctx.guild.get_channel(BUG_CHANNEL_ID)
-
-    if channel is None:
-        await ctx.send("❌ Bug report channel not found.")
-        return
-
-    embed = discord.Embed(
-        title="🐞 New Bug Report",
-        description=info,
-        color=discord.Color.red()
+    @tree.command(
+        name="bugreport",
+        description="Report a bug",
+        guild=discord.Object(id=guild_id)
     )
+    async def bugreport(interaction: discord.Interaction, info: str):
 
-    embed.add_field(
-        name="👤 Reported by",
-        value=f"{ctx.author} (`{ctx.author.id}`)",
-        inline=False
-    )
+        BUG_CHANNEL_ID = 1499576814643707994
 
-    embed.set_footer(text="Bug Report System")
+        channel = interaction.guild.get_channel(BUG_CHANNEL_ID)
 
-    await channel.send(embed=embed)
+        if channel is None:
+            await interaction.response.send_message("❌ Bug report channel not found.", ephemeral=True)
+            return
 
-    await ctx.send("✅ Your bug report has been sent!")
+        embed = discord.Embed(
+            title="🐞 New Bug Report",
+            description=info,
+            color=discord.Color.red()
+        )
+
+        embed.add_field(
+            name="👤 Reported by",
+            value=f"{interaction.user} (`{interaction.user.id}`)",
+            inline=False
+        )
+
+        embed.set_footer(text="Bug Report System")
+
+        await channel.send(embed=embed)
+
+        await interaction.response.send_message("✅ Your bug report has been sent!", ephemeral=True)

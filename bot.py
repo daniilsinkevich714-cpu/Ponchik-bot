@@ -17,6 +17,12 @@ except:
     Ping = None
     print("⚠️ Ping module not found")
 
+import Bugreport
+
+print("🔎 Bugreport loaded from:", getattr(Bugreport, "__file__", None))
+print("🔎 Bugreport attributes:", dir(Bugreport))
+print("🔎 Has setup?:", hasattr(Bugreport, "setup"))
+
 # ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")
 

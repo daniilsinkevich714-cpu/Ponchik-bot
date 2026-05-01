@@ -4,6 +4,9 @@ import json
 import time
 import os
 
+import Staff_strikes
+import Bugreport
+
 # ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")  # Render/Railway environment variable
 

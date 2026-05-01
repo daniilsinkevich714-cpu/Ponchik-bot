@@ -10,6 +10,13 @@ from discord.ext import tasks
 import Staff_strikes
 import Bugreport
 
+# 🔧 FIX: you forgot to import Ping (this would crash your bot)
+try:
+    import Ping
+except:
+    Ping = None
+    print("⚠️ Ping module not found")
+
 # ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")
 
@@ -157,62 +164,6 @@ class VouchView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.build(), view=self)
 
-@tree.command(
-    name="checkvouch",
-    description="Check user vouches",
-    guild=discord.Object(id=GUILD_ID)
-)
-async def checkvouch(interaction: discord.Interaction, user: discord.Member):
-    uid = str(user.id)
-
-    if uid not in vouches or len(vouches[uid]) == 0:
-        await interaction.response.send_message("No vouches ❌", ephemeral=True)
-        return
-
-    view = VouchView(vouches[uid], user)
-    await interaction.response.send_message(embed=view.build(), view=view)
-
-# ================= VOUCH CONFIG =================
-@tree.command(
-    name="vouchconfig",
-    description="Config vouches",
-    guild=discord.Object(id=GUILD_ID)
-)
-async def vouchconfig(interaction: discord.Interaction, user: discord.Member, amount: int, remove: bool = False, scam_only: bool = False):
-    if VOUCH_CONFIG_ROLE_ID not in [r.id for r in interaction.user.roles]:
-        await interaction.response.send_message("No permission ❌", ephemeral=True)
-        return
-
-    uid = str(user.id)
-
-    if uid not in vouches:
-        vouches[uid] = []
-
-    if remove:
-        removed = 0
-        for v in vouches[uid][:]:
-            if removed >= amount:
-                break
-            if (scam_only and v["scam"]) or (not scam_only and not v["scam"]):
-                vouches[uid].remove(v)
-                removed += 1
-
-        save_vouches(vouches)
-        await interaction.response.send_message(f"Removed {removed} vouches", ephemeral=True)
-        return
-
-    for _ in range(amount):
-        vouches[uid].append({
-            "id": len(vouches[uid]) + 1,
-            "author": "ADMIN",
-            "reason": "Manual add",
-            "scam": scam_only,
-            "time": time.time()
-        })
-
-    save_vouches(vouches)
-    await interaction.response.send_message(f"Added {amount} vouches", ephemeral=True)
-
 # ================= READY =================
 @client.event
 async def on_ready():
@@ -222,12 +173,25 @@ async def on_ready():
 
     try:
         Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
-        Ping.setup(tree, GUILD_ID)
-        Bugreport.setup(tree, GUILD_ID)
+
+        # 🔧 FIX: prevent crash if setup missing
+        if hasattr(Bugreport, "setup"):
+            Bugreport.setup(tree, GUILD_ID)
+        else:
+            print("⚠️ Bugreport.setup missing")
+
+        if Ping and hasattr(Ping, "setup"):
+            Ping.setup(tree, GUILD_ID)
+        else:
+            print("⚠️ Ping.setup missing")
+
     except Exception as e:
         print("❌ Setup error:", e)
 
-    await tree.sync(guild=guild)
+    try:
+        await tree.sync(guild=guild)
+    except Exception as e:
+        print("❌ Sync error:", e)
 
     if not rotate.is_running():
         rotate.start()

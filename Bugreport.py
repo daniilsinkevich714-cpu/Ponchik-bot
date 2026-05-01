@@ -3,10 +3,12 @@ from discord import app_commands
 
 def setup(tree: app_commands.CommandTree, guild_id: int):
 
+    GUILD = discord.Object(id=guild_id)
+
     @tree.command(
         name="bugreport",
         description="Report a bug",
-        guild=discord.Object(id=guild_id)
+        guild=GUILD
     )
     async def bugreport(interaction: discord.Interaction, info: str):
 
@@ -15,7 +17,10 @@ def setup(tree: app_commands.CommandTree, guild_id: int):
         channel = interaction.guild.get_channel(BUG_CHANNEL_ID)
 
         if channel is None:
-            await interaction.response.send_message("❌ Bug report channel not found.", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ Bug report channel not found.",
+                ephemeral=True
+            )
             return
 
         embed = discord.Embed(
@@ -34,4 +39,7 @@ def setup(tree: app_commands.CommandTree, guild_id: int):
 
         await channel.send(embed=embed)
 
-        await interaction.response.send_message("✅ Your bug report has been sent!", ephemeral=True)
+        await interaction.response.send_message(
+            "✅ Your bug report has been sent!",
+            ephemeral=True
+        )

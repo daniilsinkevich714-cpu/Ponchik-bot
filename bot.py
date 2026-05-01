@@ -3,17 +3,18 @@ from discord import app_commands
 import json
 import time
 import os
+import random
+import string
+from discord.ext import tasks
 
 import Staff_strikes
 import Bugreport
 
 # ================= CONFIG =================
-TOKEN = os.getenv("TOKEN")  # Render/Railway environment variable
+TOKEN = os.getenv("TOKEN")
 
 GUILD_ID = 1471293085706223703
-
 ROLE_ID = 1471295644969734184
-
 STAFF_ROLE_ID = 1488979323065995365
 VOUCH_CONFIG_ROLE_ID = 1490795334291554426
 
@@ -22,8 +23,15 @@ STRIKE_FILE = "strikes.json"
 VOUCH_FILE = "vouches.json"
 # =========================================
 
+# ================= SAFETY =================
+if TOKEN is None:
+    print("❌ TOKEN not set in environment variables")
+    exit()
+# =========================================
+
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
@@ -35,7 +43,8 @@ def generate_token():
 
 def load_state():
     try:
-        return json.load(open(STATE_FILE))
+        with open(STATE_FILE) as f:
+            return json.load(f)
     except:
         return {"token": "", "expiry": 0}
 
@@ -52,14 +61,11 @@ async def rotate():
     state["expiry"] = time.time() + 60
     save_state(state)
 
-
-# ================= STRIKES =================
-import Staff_strikes
-
 # ================= VOUCH SYSTEM =================
 def load_vouches():
     try:
-        return json.load(open(VOUCH_FILE))
+        with open(VOUCH_FILE) as f:
+            return json.load(f)
     except:
         return {}
 
@@ -76,7 +82,6 @@ vouches = load_vouches()
     guild=discord.Object(id=GUILD_ID)
 )
 async def vouch(interaction: discord.Interaction, user: discord.Member, reason: str = "No reason", scam: bool = False):
-
     uid = str(user.id)
 
     if uid not in vouches:
@@ -96,7 +101,7 @@ async def vouch(interaction: discord.Interaction, user: discord.Member, reason: 
 
     embed = discord.Embed(
         title="🌌 Vouch Added",
-        description=f"{user.mention}",
+        description=user.mention,
         color=discord.Color.purple()
     )
 
@@ -123,7 +128,6 @@ class VouchView(discord.ui.View):
         good = len([v for v in self.entries if not v["scam"]])
         scams = len([v for v in self.entries if v["scam"]])
 
-        # 🔥 FIXED HERE (NO "GOOD VOUCHES" TEXT)
         embed.add_field(name="Vouches", value=good, inline=True)
         embed.add_field(name="Scam vouches", value=scams, inline=True)
 
@@ -159,7 +163,6 @@ class VouchView(discord.ui.View):
     guild=discord.Object(id=GUILD_ID)
 )
 async def checkvouch(interaction: discord.Interaction, user: discord.Member):
-
     uid = str(user.id)
 
     if uid not in vouches or len(vouches[uid]) == 0:
@@ -172,17 +175,10 @@ async def checkvouch(interaction: discord.Interaction, user: discord.Member):
 # ================= VOUCH CONFIG =================
 @tree.command(
     name="vouchconfig",
-    description="Config vouches (add/remove normal or scam)",
+    description="Config vouches",
     guild=discord.Object(id=GUILD_ID)
 )
-async def vouchconfig(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    amount: int,
-    remove: bool = False,
-    scam_only: bool = False
-):
-
+async def vouchconfig(interaction: discord.Interaction, user: discord.Member, amount: int, remove: bool = False, scam_only: bool = False):
     if VOUCH_CONFIG_ROLE_ID not in [r.id for r in interaction.user.roles]:
         await interaction.response.send_message("No permission ❌", ephemeral=True)
         return
@@ -194,24 +190,15 @@ async def vouchconfig(
 
     if remove:
         removed = 0
-
         for v in vouches[uid][:]:
             if removed >= amount:
                 break
-
-            if scam_only and v["scam"]:
-                vouches[uid].remove(v)
-                removed += 1
-            elif not scam_only and not v["scam"]:
+            if (scam_only and v["scam"]) or (not scam_only and not v["scam"]):
                 vouches[uid].remove(v)
                 removed += 1
 
         save_vouches(vouches)
-
-        await interaction.response.send_message(
-            f"Removed {removed} vouches",
-            ephemeral=True
-        )
+        await interaction.response.send_message(f"Removed {removed} vouches", ephemeral=True)
         return
 
     for _ in range(amount):
@@ -224,11 +211,7 @@ async def vouchconfig(
         })
 
     save_vouches(vouches)
-
-    await interaction.response.send_message(
-        f"Added {amount} vouches",
-        ephemeral=True
-    )
+    await interaction.response.send_message(f"Added {amount} vouches", ephemeral=True)
 
 # ================= READY =================
 @client.event
@@ -237,10 +220,18 @@ async def on_ready():
 
     guild = discord.Object(id=GUILD_ID)
 
-    Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
-    Bugreport.setup(tree, GUILD_ID)
+    try:
+        Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
+        Bugreport.setup(tree, GUILD_ID)
+    except Exception as e:
+        print("❌ Setup error:", e)
 
     await tree.sync(guild=guild)
 
-    rotate.start()
-    print("Bot fully loaded")
+    if not rotate.is_running():
+        rotate.start()
+
+    print("Bot fully loaded 🚀")
+
+# ================= RUN =================
+client.run(TOKEN)

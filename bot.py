@@ -9,7 +9,8 @@ from discord.ext import tasks
 
 import Staff_strikes
 import Bugreport
-import vouch_system  # ✅ VOUCH SYSTEM
+import vouch_system
+import help  # ✅ IMPORTANT: this registers /help
 
 try:
     import Ping
@@ -38,7 +39,9 @@ intents.members = True
 intents.message_content = True
 
 client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+
+# ✅ FIXED TREE (this is REQUIRED for slash commands)
+tree = client.tree
 
 # ================= STATE =================
 def generate_token():
@@ -75,38 +78,40 @@ async def on_ready():
     try:
         print("🔧 Loading modules...")
 
+        # ===== REGISTER ALL COMMAND MODULES =====
         Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
 
         if hasattr(Bugreport, "setup"):
             Bugreport.setup(tree, GUILD_ID)
-        else:
-            print("⚠️ Bugreport.setup missing")
 
         if Ping and hasattr(Ping, "setup"):
             Ping.setup(tree, GUILD_ID)
-        else:
-            print("⚠️ Ping.setup missing")
 
-        # ✅ FIXED: correct vouch setup call
         vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
+
+        # ✅ HELP COMMAND REGISTER
+        help.setup(tree)
 
     except Exception as e:
         print("❌ Setup error:", e)
 
     # ================= SYNC =================
     try:
-        print("🔁 Syncing commands...")
+        print("🔁 Syncing slash commands...")
 
-        # ALWAYS sync guild first (fast + instant update)
+        # FAST GUILD SYNC (instant update in your server)
         synced = await tree.sync(guild=guild)
         print(f"✅ Guild synced: {len(synced)} commands")
 
-        # backup global sync
+    except Exception as e:
+        print("❌ Guild sync error:", e)
+
+    try:
+        # OPTIONAL GLOBAL SYNC (slower, backup)
         synced_global = await tree.sync()
         print(f"🌍 Global synced: {len(synced_global)} commands")
-
     except Exception as e:
-        print("❌ Sync error:", e)
+        print("⚠️ Global sync skipped:", e)
 
     if not rotate.is_running():
         rotate.start()

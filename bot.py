@@ -38,7 +38,7 @@ intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
 tree = client.tree
 
-# ================= ROTATION (your system kept) =================
+# ================= ROTATION =================
 state = {"token": "", "expiry": 0}
 
 def generate_token():
@@ -73,7 +73,6 @@ async def on_ready():
 
     print("🔁 Syncing slash commands...")
 
-    # FORCE SAFE SYNC
     try:
         synced = await tree.sync(guild=guild)
         print(f"✅ Guild synced: {len(synced)} commands")
@@ -81,6 +80,16 @@ async def on_ready():
         print(f"❌ Sync error: {e}")
 
     print("🚀 Bot fully loaded")
+
+    # ================= STATUS (ADDED CLEAN) =================
+    await client.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.watching,
+            name="/Help | Discord.gg/ponchik"
+        ),
+        status=discord.Status.online
+    )
+    # ========================================================
 
     if not rotate.is_running():
         rotate.start()

@@ -133,10 +133,12 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         scam: bool = False
     ):
 
+        # ✅ FIX: prevent "application failed"
+        await interaction.response.defer(ephemeral=True)
+
         if not is_admin(interaction, VOUCH_CONFIG_ROLE_ID):
-            return await interaction.response.send_message(
-                "❌ You don't have permission.",
-                ephemeral=True
+            return await interaction.followup.send(
+                "❌ You don't have permission."
             )
 
         uid = str(user.id)
@@ -144,10 +146,11 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
 
         if remove:
             # REMOVE VOUCHES
-            filtered = [v for v in data["vouches"] if v["scam"] == scam]
+            # ✅ FIX: safer key check
+            filtered = [v for v in data["vouches"] if v.get("scam", False) == scam]
 
             if not filtered:
-                return await interaction.response.send_message("❌ No matching vouches found.")
+                return await interaction.followup.send("❌ No matching vouches found.")
 
             removed = 0
 
@@ -159,7 +162,7 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
 
             save_vouches(vouches)
 
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 f"🗑️ Removed {removed} {'scam' if scam else 'normal'} vouches from {user.mention}"
             )
 
@@ -178,6 +181,6 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
 
             save_vouches(vouches)
 
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 f"➕ Added {amount} {'scam' if scam else 'normal'} vouches to {user.mention}"
             )

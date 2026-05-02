@@ -1,48 +1,47 @@
-@tree.command(
-    name="help",
-    description="Shows all bot commands",
-    guild=discord.Object(id=GUILD_ID)
-)
-async def help_command(interaction: discord.Interaction):
+import discord
+from discord import app_commands
 
-    embed = discord.Embed(
-        title="📖 Donut SMP Help Menu",
-        description="All available commands in this bot:",
-        color=discord.Color.purple()
+GUILD_ID = 1471293085706223703
+
+def setup(tree: app_commands.CommandTree):
+
+    @tree.command(
+        name="help",
+        description="Shows all bot commands",
+        guild=discord.Object(id=GUILD_ID)
     )
+    async def help_command(interaction: discord.Interaction):
 
-    # ================= MEMBER COMMANDS =================
-    embed.add_field(
-        name="👤 Member Commands",
-        value=(
-            "/vouch user reason scam:true/false - Give a vouch or scam report\n"
-            "/checkvouches @user - View user vouches\n"
-            "/ping - Check bot latency\n"
-            "/bugreport info - Report a bug"
-        ),
-        inline=False
-    )
+        embed = discord.Embed(
+            title="📖 Donut SMP Help Menu",
+            description="All available commands in this bot:",
+            color=discord.Color.purple()
+        )
 
-    # ================= STAFF COMMANDS =================
-    embed.add_field(
-        name="🛡️ Staff Commands",
-        value=(
-            "/staffstrike @user reason remove:true/false - Manage staff strikes\n"
-            "/vouchconfig @user amount remove:true/false scam:true/false - Manage vouches (Admin only)"
-        ),
-        inline=False
-    )
+        embed.add_field(
+            name="👤 Member Commands",
+            value=(
+                "/vouch user reason scam:true/false\n"
+                "/checkvouches @user\n"
+                "/ping\n"
+                "/bugreport info"
+            ),
+            inline=False
+        )
 
-    # ================= INFO =================
-    embed.add_field(
-        name="📊 Info",
-        value=(
-            "This bot is used for Donut SMP trading reputation.\n"
-            "Use commands responsibly."
-        ),
-        inline=False
-    )
+        embed.add_field(
+            name="🛡️ Staff Commands",
+            value=(
+                "/staffstrike @user reason remove:true/false\n"
+                "/vouchconfig @user amount remove:true/false scam:true/false"
+            ),
+            inline=False
+        )
 
-    embed.set_footer(text="Donut SMP Bot • Help System")
+        embed.add_field(
+            name="📊 Info",
+            value="Donut SMP trading reputation system bot.",
+            inline=False
+        )
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)

@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands, tasks
-import json
-import time
 import os
+import time
 import random
 import string
 
@@ -25,28 +24,26 @@ ROLE_ID = 1471295644969734184
 STAFF_ROLE_ID = 1488979323065995365
 VOUCH_CONFIG_ROLE_ID = 1490795334291554426
 
-STATE_FILE = "state.json"
 STRIKE_FILE = "strikes.json"
 
-if TOKEN is None:
+if not TOKEN:
     print("❌ TOKEN not set")
     exit()
 
-# ================= BOT =================
+# ================= BOT SETUP =================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
 client = commands.Bot(command_prefix="!", intents=intents)
-
 tree = client.tree
 
-# ================= STATE =================
+# ================= ROTATION (your system kept) =================
+state = {"token": "", "expiry": 0}
+
 def generate_token():
     chars = string.ascii_letters + string.digits
     return ''.join(random.choices(chars, k=64))
-
-state = {"token": "", "expiry": 0}
 
 @tasks.loop(minutes=1)
 async def rotate():
@@ -56,32 +53,32 @@ async def rotate():
 # ================= READY =================
 @client.event
 async def on_ready():
-    print(f"Bot running as {client.user}")
+    print(f"✅ Logged in as {client.user}")
 
     guild = discord.Object(id=GUILD_ID)
 
     print("🔧 Loading modules...")
 
-    # ================= REGISTER COMMANDS FIRST =================
+    # Register all command systems FIRST
     Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
-
-    if hasattr(Bugreport, "setup"):
-        Bugreport.setup(tree, GUILD_ID)
-
-    if Ping and hasattr(Ping, "setup"):
-        Ping.setup(tree, GUILD_ID)
-
+    Bugreport.setup(tree, GUILD_ID)
     vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
 
-    help.setup(tree)  # ✅ MUST BE BEFORE SYNC
+    if Ping:
+        Ping.setup(tree, GUILD_ID)
 
-    print("🔁 Syncing commands...")
+    # IMPORTANT: help MUST be registered before sync
+    help.setup(tree)
+    print("✅ Help loaded")
 
-    # ================= IMPORTANT FIX =================
-    await client.wait_until_ready()
+    print("🔁 Syncing slash commands...")
 
-    synced = await tree.sync(guild=guild)
-    print(f"✅ Guild synced: {len(synced)} commands")
+    # FORCE SAFE SYNC
+    try:
+        synced = await tree.sync(guild=guild)
+        print(f"✅ Guild synced: {len(synced)} commands")
+    except Exception as e:
+        print(f"❌ Sync error: {e}")
 
     print("🚀 Bot fully loaded")
 

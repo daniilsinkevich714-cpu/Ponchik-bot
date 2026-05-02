@@ -1,63 +1,116 @@
 import discord
 from discord import app_commands
+import json
+import time
 import os
+import random
+import string
+from discord.ext import tasks
 
-import Bugreport
-import Ping
 import Staff_strikes
-import vouch  # if you separated it
+import Bugreport
+import vouch_system  # ✅ NEW IMPORT
 
+try:
+    import Ping
+except:
+    Ping = None
+    print("⚠️ Ping module not found")
 
+print("🔎 Bugreport loaded from:", getattr(Bugreport, "__file__", None))
+print("🔎 Bugreport attributes:", dir(Bugreport))
+print("🔎 Has setup?:", hasattr(Bugreport, "setup"))
+
+# ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")
 
+GUILD_ID = 1471293085706223703
+ROLE_ID = 1471295644969734184
+STAFF_ROLE_ID = 1488979323065995365
+VOUCH_CONFIG_ROLE_ID = 1490795334291554426
+
+STATE_FILE = "state.json"
+STRIKE_FILE = "strikes.json"
+# =========================================
+
+if TOKEN is None:
+    print("❌ TOKEN not set in environment variables")
+    exit()
+
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
+intents.message_content = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+# ================= STATE =================
+def generate_token():
+    chars = string.ascii_letters + string.digits + "!@#$%^&*()_-+=[]{}|;:,.<>?/`~\"'"
+    return ''.join(random.choices(chars, k=64))
+
+def load_state():
+    try:
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    except:
+        return {"token": "", "expiry": 0}
+
+def save_state(s):
+    with open(STATE_FILE, "w") as f:
+        json.dump(s, f)
+
+state = load_state()
+
+@tasks.loop(minutes=1)
+async def rotate():
+    global state
+    state["token"] = generate_token()
+    state["expiry"] = time.time() + 60
+    save_state(state)
+
 # ================= READY =================
 @client.event
 async def on_ready():
-    print(f"✅ Logged in as {client.user}")
+    print(f"Bot running as {client.user}")
 
-    guild = discord.Object(id=config.GUILD_ID if "config" in globals() else 1471293085706223703)
-
-    # ================= SETUP MODULES =================
-    try:
-        Staff_strikes.setup(tree, discord, config.GUILD_ID, config.STAFF_ROLE_ID, config.STRIKE_FILE)
-        print("✅ Staff_strikes loaded")
-    except Exception as e:
-        print("❌ Staff_strikes error:", e)
+    guild = discord.Object(id=GUILD_ID)
 
     try:
-        Bugreport.setup(tree, config.GUILD_ID)
-        print("✅ Bugreport loaded")
-    except Exception as e:
-        print("❌ Bugreport error:", e)
+        Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
 
-    try:
-        Ping.setup(tree, config.GUILD_ID)
-        print("✅ Ping loaded")
-    except Exception as e:
-        print("❌ Ping error:", e)
+        if hasattr(Bugreport, "setup"):
+            Bugreport.setup(tree, GUILD_ID)
+        else:
+            print("⚠️ Bugreport.setup missing")
 
-    try:
-        vouch.setup(tree, config.GUILD_ID)
-        print("✅ Vouch loaded")
-    except Exception as e:
-        print("❌ Vouch error:", e)
+        if Ping and hasattr(Ping, "setup"):
+            Ping.setup(tree, GUILD_ID)
+        else:
+            print("⚠️ Ping.setup missing")
 
-    # ================= SYNC =================
+        # ✅ VOUCH SYSTEM ADDED HERE
+        vouch_system.setup(tree, GUILD_ID)
+
+    except Exception as e:
+        print("❌ Setup error:", e)
+
     try:
         print("🔁 Syncing commands...")
+
         synced = await tree.sync(guild=guild)
-        print(f"✅ Synced {len(synced)} commands")
+        print(f"🔁 Guild synced: {len(synced)} commands")
+
+        synced_global = await tree.sync()
+        print(f"🌍 Global synced: {len(synced_global)} commands")
+
     except Exception as e:
         print("❌ Sync error:", e)
 
-    print("🚀 Bot fully ready")
+    if not rotate.is_running():
+        rotate.start()
+
+    print("Bot fully loaded 🚀")
 
 # ================= RUN =================
 client.run(TOKEN)

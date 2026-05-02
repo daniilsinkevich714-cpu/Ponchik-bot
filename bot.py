@@ -1,5 +1,4 @@
 import discord
-from discord import app_commands
 from discord.ext import commands, tasks
 import json
 import time
@@ -33,14 +32,14 @@ if TOKEN is None:
     print("❌ TOKEN not set")
     exit()
 
-# ================= BOT (FIXED) =================
+# ================= BOT =================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
 client = commands.Bot(command_prefix="!", intents=intents)
 
-tree = client.tree  # ✅ THIS NOW WORKS
+tree = client.tree
 
 # ================= STATE =================
 def generate_token():
@@ -63,6 +62,7 @@ async def on_ready():
 
     print("🔧 Loading modules...")
 
+    # ================= REGISTER COMMANDS FIRST =================
     Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
 
     if hasattr(Bugreport, "setup"):
@@ -73,10 +73,12 @@ async def on_ready():
 
     vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
 
-    help.setup(tree)
+    help.setup(tree)  # ✅ MUST BE BEFORE SYNC
 
-    # ================= SYNC =================
     print("🔁 Syncing commands...")
+
+    # ================= IMPORTANT FIX =================
+    await client.wait_until_ready()
 
     synced = await tree.sync(guild=guild)
     print(f"✅ Guild synced: {len(synced)} commands")

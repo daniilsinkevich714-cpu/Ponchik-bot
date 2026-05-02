@@ -44,4 +44,6 @@ def setup(tree: app_commands.CommandTree):
             inline=False
         )
 
+        embed.set_footer(text="Donut SMP Bot • Help System")
+
         await interaction.response.send_message(embed=embed, ephemeral=True)

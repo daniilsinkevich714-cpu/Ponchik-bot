@@ -14,7 +14,7 @@ def setup(tree: app_commands.CommandTree):
     async def help_command(interaction: discord.Interaction):
 
         embed = discord.Embed(
-            title="📖 Donut SMP Help Menu",
+            title="📖 Ponchik Galaxy Help Menu",
             description="All available commands in this bot:",
             color=discord.Color.purple()
         )
@@ -47,4 +47,4 @@ def setup(tree: app_commands.CommandTree):
 
         embed.set_footer(text="Donut SMP Bot • Help System")
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed)

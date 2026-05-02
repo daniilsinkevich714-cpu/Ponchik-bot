@@ -41,7 +41,7 @@ def setup(tree: app_commands.CommandTree):
 
         embed.add_field(
             name="📊 Info",
-            value="Donut SMP trading reputation system bot.",
+            value="A bot made to help ponchik galaxy.",
             inline=False
         )
 

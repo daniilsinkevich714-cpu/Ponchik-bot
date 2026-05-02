@@ -1,5 +1,6 @@
 import discord
 from discord import app_commands
+print("✅ HELP MODULE LOADED")
 
 GUILD_ID = 1471293085706223703
 

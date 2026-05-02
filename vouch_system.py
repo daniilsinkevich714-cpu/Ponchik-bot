@@ -1,31 +1,30 @@
 import discord
 from discord import app_commands
-import json
 import time
+import os
+from pymongo import MongoClient
 
-# ================= CONFIG =================
-VOUCH_FILE = "vouches.json"
-
-# ================= LOAD / SAVE =================
-def load_vouches():
-    try:
-        with open(VOUCH_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save_vouches(data):
-    with open(VOUCH_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-vouches = load_vouches()
+# ================= MONGO CONFIG =================
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client["discord_bot"]
+vouch_db = db["vouches"]
 
 
 # ================= HELPERS =================
 def get_user_data(uid):
-    if uid not in vouches:
-        vouches[uid] = {"vouches": []}
-    return vouches[uid]
+    data = vouch_db.find_one({"_id": uid})
+    if not data:
+        data = {"_id": uid, "vouches": []}
+        vouch_db.insert_one(data)
+    return data
+
+
+def save_user(data):
+    vouch_db.update_one(
+        {"_id": data["_id"]},
+        {"$set": data},
+        upsert=True
+    )
 
 
 def is_admin(interaction, role_id):
@@ -61,7 +60,7 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
             "time": time.time()
         })
 
-        save_vouches(vouches)
+        save_user(data)
 
         embed = discord.Embed(
             title="💠 Vouch Added",
@@ -91,8 +90,8 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         data = get_user_data(uid)
         entries = data["vouches"]
 
-        good = len([v for v in entries if not v["scam"]])
-        scams = len([v for v in entries if v["scam"]])
+        good = len([v for v in entries if not v.get("scam", False)])
+        scams = len([v for v in entries if v.get("scam", False)])
 
         embed = discord.Embed(
             title=f"📊 Vouch Profile - {user}",
@@ -103,13 +102,12 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         embed.add_field(name="🚨 Scam Vouches", value=scams, inline=True)
         embed.add_field(name="📦 Total", value=len(entries), inline=True)
 
-        # last 3 vouches
         last = entries[-3:][::-1]
 
         if last:
             text = ""
             for v in last:
-                tag = "🚨 SCAM" if v["scam"] else "✅"
+                tag = "🚨 SCAM" if v.get("scam", False) else "✅"
                 text += f"{tag} **#{v['id']}** - {v['giver']}\n> {v['reason']}\n\n"
 
             embed.add_field(name="🕒 Last 3 Vouches", value=text, inline=False)
@@ -133,20 +131,15 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         scam: bool = False
     ):
 
-        # ✅ FIX: prevent "application failed"
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
 
         if not is_admin(interaction, VOUCH_CONFIG_ROLE_ID):
-            return await interaction.followup.send(
-                "❌ You don't have permission."
-            )
+            return await interaction.followup.send("❌ You don't have permission.")
 
         uid = str(user.id)
         data = get_user_data(uid)
 
         if remove:
-            # REMOVE VOUCHES
-            # ✅ FIX: safer key check
             filtered = [v for v in data["vouches"] if v.get("scam", False) == scam]
 
             if not filtered:
@@ -160,14 +153,13 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
                 data["vouches"].remove(v)
                 removed += 1
 
-            save_vouches(vouches)
+            save_user(data)
 
             return await interaction.followup.send(
                 f"🗑️ Removed {removed} {'scam' if scam else 'normal'} vouches from {user.mention}"
             )
 
         else:
-            # ADD VOUCHES (system-generated/admin adjustment)
             for i in range(amount):
                 vid = len(data["vouches"]) + 1
 
@@ -179,7 +171,7 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
                     "time": time.time()
                 })
 
-            save_vouches(vouches)
+            save_user(data)
 
             return await interaction.followup.send(
                 f"➕ Added {amount} {'scam' if scam else 'normal'} vouches to {user.mention}"

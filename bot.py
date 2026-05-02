@@ -170,7 +170,9 @@ class VouchView(discord.ui.View):
             self.page += 1
         await interaction.response.edit_message(embed=self.build(), view=self)
 
-# ================= READY =================@client.event
+# ================= READY =================
+
+@client.event
 async def on_ready():
     print(f"Bot running as {client.user}")
 

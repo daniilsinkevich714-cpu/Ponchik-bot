@@ -20,7 +20,12 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
         description="Add or remove staff strikes",
         guild=discord.Object(id=GUILD_ID)
     )
-    async def staffstrike(interaction: discord.Interaction, user: discord.Member, reason: str = None, remove: bool = False):
+    async def staffstrike(
+        interaction: discord.Interaction,
+        user: discord.Member,
+        reason: str = None,
+        remove: bool = False
+    ):
 
         if STAFF_ROLE_ID not in [r.id for r in interaction.user.roles]:
             await interaction.response.send_message("No permission ❌", ephemeral=True)
@@ -55,7 +60,6 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
             await interaction.response.send_message("You must provide a reason ❌", ephemeral=True)
             return
 
-        # 🔥 NEW: simple increment ID
         strike_id = len(strikes[uid]) + 1
 
         strikes[uid].append({
@@ -64,9 +68,27 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
             "time": time.time()
         })
 
-        save_strikes(strikes)
-
         count = len(strikes[uid])
+
+        # ================= 3/3 RESET SYSTEM =================
+        if count >= 3:
+            strikes[uid] = []  # reset strikes
+
+            save_strikes(strikes)
+
+            embed = discord.Embed(
+                title="🚨 DEMOTION TRIGGERED",
+                description=f"{user.mention} has reached **3/3 strikes**",
+                color=discord.Color.red()
+            )
+
+            embed.add_field(name="Status", value="⚠️ Demotion / Action Required", inline=False)
+            embed.add_field(name="Reason", value=reason, inline=False)
+
+            await interaction.response.send_message(embed=embed)
+            return
+
+        save_strikes(strikes)
 
         embed = discord.Embed(
             title="🟣 Staff Strike",

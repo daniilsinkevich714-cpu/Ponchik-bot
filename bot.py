@@ -9,17 +9,13 @@ from discord.ext import tasks
 
 import Staff_strikes
 import Bugreport
-import vouch_system  # ✅ NEW IMPORT
+import vouch_system  # ✅ VOUCH SYSTEM
 
 try:
     import Ping
 except:
     Ping = None
     print("⚠️ Ping module not found")
-
-print("🔎 Bugreport loaded from:", getattr(Bugreport, "__file__", None))
-print("🔎 Bugreport attributes:", dir(Bugreport))
-print("🔎 Has setup?:", hasattr(Bugreport, "setup"))
 
 # ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")
@@ -77,6 +73,8 @@ async def on_ready():
     guild = discord.Object(id=GUILD_ID)
 
     try:
+        print("🔧 Loading modules...")
+
         Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
 
         if hasattr(Bugreport, "setup"):
@@ -89,18 +87,21 @@ async def on_ready():
         else:
             print("⚠️ Ping.setup missing")
 
-        # ✅ VOUCH SYSTEM ADDED HERE
-        vouch_system.setup(tree, GUILD_ID)
+        # ✅ FIXED: correct vouch setup call
+        vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
 
     except Exception as e:
         print("❌ Setup error:", e)
 
+    # ================= SYNC =================
     try:
         print("🔁 Syncing commands...")
 
+        # ALWAYS sync guild first (fast + instant update)
         synced = await tree.sync(guild=guild)
-        print(f"🔁 Guild synced: {len(synced)} commands")
+        print(f"✅ Guild synced: {len(synced)} commands")
 
+        # backup global sync
         synced_global = await tree.sync()
         print(f"🌍 Global synced: {len(synced_global)} commands")
 
@@ -110,7 +111,7 @@ async def on_ready():
     if not rotate.is_running():
         rotate.start()
 
-    print("Bot fully loaded 🚀")
+    print("🚀 Bot fully loaded")
 
 # ================= RUN =================
 client.run(TOKEN)

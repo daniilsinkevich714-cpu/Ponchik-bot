@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, MONGO_URI):
 
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(MONGO_URL)
     db = client["staff_system"]
     strikes = db["strikes"]
 

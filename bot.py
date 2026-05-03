@@ -59,7 +59,7 @@ async def on_ready():
 
     # ================= MODULE LOADING SAFETY =================
     try:
-        Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
+        Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, MONGO_URI)
         Bugreport.setup(tree, GUILD_ID)
         vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
 

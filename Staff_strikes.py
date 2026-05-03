@@ -1,19 +1,13 @@
 import discord
-import json, time
+import time
+import os
+from pymongo import MongoClient
 
-def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
+def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, MONGO_URI):
 
-    def load_strikes():
-        try:
-            return json.load(open(STRIKE_FILE))
-        except:
-            return {}
-
-    def save_strikes(data):
-        with open(STRIKE_FILE, "w") as f:
-            json.dump(data, f)
-
-    strikes = load_strikes()
+    client = MongoClient(MONGO_URI)
+    db = client["staff_system"]
+    strikes = db["strikes"]
 
     @tree.command(
         name="staffstrike",
@@ -32,18 +26,26 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
             return
 
         uid = str(user.id)
+        data = strikes.find_one({"user_id": uid})
 
-        if uid not in strikes:
-            strikes[uid] = []
+        if not data:
+            data = {"user_id": uid, "count": 0, "records": []}
 
         # ================= REMOVE =================
         if remove:
-            if len(strikes[uid]) == 0:
+            if data["count"] == 0:
                 await interaction.response.send_message("No strikes ❌", ephemeral=True)
                 return
 
-            removed = strikes[uid].pop()
-            save_strikes(strikes)
+            removed = data["records"][-1]
+
+            strikes.update_one(
+                {"user_id": uid},
+                {
+                    "$pop": {"records": 1},
+                    "$inc": {"count": -1}
+                }
+            )
 
             embed = discord.Embed(
                 title="🟡 Strike Removed",
@@ -60,21 +62,32 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
             await interaction.response.send_message("You must provide a reason ❌", ephemeral=True)
             return
 
-        strike_id = len(strikes[uid]) + 1
+        strike_id = data["count"] + 1
 
-        strikes[uid].append({
-            "id": strike_id,
-            "reason": reason,
-            "time": time.time()
-        })
+        strikes.update_one(
+            {"user_id": uid},
+            {
+                "$push": {
+                    "records": {
+                        "id": strike_id,
+                        "reason": reason,
+                        "time": time.time()
+                    }
+                },
+                "$inc": {"count": 1}
+            },
+            upsert=True
+        )
 
-        count = len(strikes[uid])
+        new_count = data["count"] + 1
 
-        # ================= 3/3 RESET SYSTEM =================
-        if count >= 3:
-            strikes[uid] = []  # reset strikes
+        # ================= 3/3 RESET =================
+        if new_count >= 3:
 
-            save_strikes(strikes)
+            strikes.update_one(
+                {"user_id": uid},
+                {"$set": {"count": 0, "records": []}}
+            )
 
             embed = discord.Embed(
                 title="🚨 DEMOTION TRIGGERED",
@@ -88,8 +101,6 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
             await interaction.response.send_message(embed=embed)
             return
 
-        save_strikes(strikes)
-
         embed = discord.Embed(
             title="🟣 Staff Strike",
             description=f"Strike to {user.mention}",
@@ -97,7 +108,7 @@ def setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE):
         )
 
         embed.add_field(name="Reason", value=reason, inline=False)
-        embed.add_field(name="Strikes", value=f"{count}/3", inline=False)
+        embed.add_field(name="Strikes", value=f"{new_count}/3", inline=False)
         embed.set_footer(text=f"Strike ID: {strike_id}")
 
         await interaction.response.send_message(embed=embed)

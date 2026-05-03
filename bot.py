@@ -24,7 +24,6 @@ ROLE_ID = 1471295644969734184
 STAFF_ROLE_ID = 1488979323065995365
 VOUCH_CONFIG_ROLE_ID = 1490795334291554426
 
-STRIKE_FILE = "strikes.json"
 
 if not TOKEN:
     raise Exception("❌ TOKEN not set in environment variables")

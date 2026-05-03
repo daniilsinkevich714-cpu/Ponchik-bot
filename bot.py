@@ -27,8 +27,7 @@ VOUCH_CONFIG_ROLE_ID = 1490795334291554426
 STRIKE_FILE = "strikes.json"
 
 if not TOKEN:
-    print("❌ TOKEN not set")
-    exit()
+    raise Exception("❌ TOKEN not set in environment variables")
 
 # ================= BOT SETUP =================
 intents = discord.Intents.default()
@@ -59,18 +58,23 @@ async def on_ready():
 
     print("🔧 Loading modules...")
 
-    # Register all command systems FIRST
-    Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
-    Bugreport.setup(tree, GUILD_ID)
-    vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
+    # ================= MODULE LOADING SAFETY =================
+    try:
+        Staff_strikes.setup(tree, discord, GUILD_ID, STAFF_ROLE_ID, STRIKE_FILE)
+        Bugreport.setup(tree, GUILD_ID)
+        vouch_system.setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID)
 
-    if Ping:
-        Ping.setup(tree, GUILD_ID)
+        if Ping:
+            Ping.setup(tree, GUILD_ID)
 
-    # IMPORTANT: help MUST be registered before sync
-    help.setup(tree)
-    print("✅ Help loaded")
+        help.setup(tree)
 
+        print("✅ All modules loaded")
+
+    except Exception as e:
+        print("❌ Module loading error:", e)
+
+    # ================= SYNC COMMANDS =================
     print("🔁 Syncing slash commands...")
 
     try:
@@ -81,7 +85,7 @@ async def on_ready():
 
     print("🚀 Bot fully loaded")
 
-    # ================= STATUS (ADDED CLEAN) =================
+    # ================= STATUS =================
     await client.change_presence(
         activity=discord.Activity(
             type=discord.ActivityType.watching,
@@ -89,10 +93,23 @@ async def on_ready():
         ),
         status=discord.Status.online
     )
-    # ========================================================
 
+    # ================= START TASKS =================
     if not rotate.is_running():
         rotate.start()
+
+# ================= GLOBAL ERROR HANDLER =================
+@client.event
+async def on_app_command_error(interaction, error):
+    print("❌ Slash command error:", error)
+
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send("❌ An error occurred.")
+        else:
+            await interaction.response.send_message("❌ An error occurred.", ephemeral=True)
+    except:
+        pass
 
 # ================= RUN =================
 client.run(TOKEN)

@@ -5,7 +5,7 @@ import os
 from pymongo import MongoClient
 
 # ================= MONGO CONFIG =================
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = os.getenv("MONGO_URL")
 
 if not MONGO_URI:
     raise Exception("❌ MONGO_URI is NOT set in environment variables")

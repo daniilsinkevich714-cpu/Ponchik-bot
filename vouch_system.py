@@ -5,26 +5,45 @@ import os
 from pymongo import MongoClient
 
 # ================= MONGO CONFIG =================
-client = MongoClient(os.getenv("MONGO_URI"))
+MONGO_URI = os.getenv("MONGO_URI")
+
+if not MONGO_URI:
+    raise Exception("❌ MONGO_URI is NOT set in environment variables")
+
+print("✅ Mongo connected:", MONGO_URI[:25], "...")
+
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = client["discord_bot"]
 vouch_db = db["vouches"]
 
 
 # ================= HELPERS =================
 def get_user_data(uid):
-    data = vouch_db.find_one({"_id": uid})
+    try:
+        data = vouch_db.find_one({"_id": uid})
+    except Exception as e:
+        print("❌ Mongo error (get_user_data):", e)
+        return {"_id": uid, "vouches": []}
+
     if not data:
         data = {"_id": uid, "vouches": []}
-        vouch_db.insert_one(data)
+        try:
+            vouch_db.insert_one(data)
+        except Exception as e:
+            print("❌ Mongo insert error:", e)
+
     return data
 
 
 def save_user(data):
-    vouch_db.update_one(
-        {"_id": data["_id"]},
-        {"$set": data},
-        upsert=True
-    )
+    try:
+        vouch_db.update_one(
+            {"_id": data["_id"]},
+            {"$set": data},
+            upsert=True
+        )
+    except Exception as e:
+        print("❌ Mongo save error:", e)
 
 
 def is_admin(interaction, role_id):
@@ -46,6 +65,12 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         reason: str,
         scam: bool = False
     ):
+
+        # ❌ Prevent self vouch
+        if user.id == interaction.user.id:
+            return await interaction.response.send_message(
+                "❌ You cannot vouch yourself.", ephemeral=True
+            )
 
         uid = str(user.id)
         data = get_user_data(uid)
@@ -86,6 +111,8 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         user: discord.Member
     ):
 
+        await interaction.response.defer()  # prevents timeout
+
         uid = str(user.id)
         data = get_user_data(uid)
         entries = data["vouches"]
@@ -114,7 +141,7 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         else:
             embed.add_field(name="🕒 Last 3 Vouches", value="No vouches yet", inline=False)
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 
     # ================= /vouchconfig =================
@@ -131,7 +158,7 @@ def setup(tree, GUILD_ID, VOUCH_CONFIG_ROLE_ID):
         scam: bool = False
     ):
 
-        await interaction.response.defer(ephemeral=False)
+        await interaction.response.defer()
 
         if not is_admin(interaction, VOUCH_CONFIG_ROLE_ID):
             return await interaction.followup.send("❌ You don't have permission.")
